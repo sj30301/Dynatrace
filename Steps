@@ -1,0 +1,56 @@
+Refer below line 
+https://www.dynatrace.com/news/blog/monitor-your-xamarin-apps-with-dynatrace-oneagent/
+https://www.dynatrace.com/support/help/technology-support/application-software/other-technologies/supported-out-of-the-box/xamarin/?android%3C-%3Eios=ios
+
+
+Step 1 : In Visual Studio >Manage NuGet Package > Search for Dynatrace.OneAgent.Xamarin Install
+Step 2: For Android
+        Create a Properties File in Android's Asset Folder Named Dynatrace.Properties
+        And Add  
+        ApplicationId
+        BeaconURL
+        
+        If you have a Forms-based application, update your *.Android.csproj file 
+        by adding a build target that invokes the Android auto-instrumentation 
+        each time you bundle/build your APK.
+        
+        Open Android.csproj file and Add 
+              
+              
+    <Target Name="DynatraceInstrumentation" AfterTargets="_BuildApkEmbed" Condition="Exists('@(ApkFiles)')">
+
+    <PropertyGroup Condition=" '$(OS)' != 'Windows_NT' ">
+        <PathSeparator>/</PathSeparator>
+        <Instrumentor>instrument.sh</Instrumentor>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(OS)' == 'Windows_NT' ">
+        <PathSeparator>\</PathSeparator>
+        <Instrumentor>instrument.cmd</Instrumentor>
+    </PropertyGroup>
+
+    <Error Condition="!Exists('$(ProjectDir)Assets$(PathSeparator)Dynatrace.properties')" Text="Properties File is not available!" />
+    <Error Condition="!Exists('%(ApkFiles.FullPath)')" Text="APK File(s) is (are) not available!" />
+
+	<ItemGroup>
+        <FilteredReferencesNuGet Include="@(_ReferencesFromNuGetPackages)" Condition="$([System.String]::new('%(_ReferencesFromNuGetPackages.FullPath)').Contains('Dynatrace.OneAgent.Android.dll'))" />
+	    <FilteredReferences Include="@(Reference)" Condition="$([System.String]::new('%(Reference.HintPath)').Contains('Dynatrace.OneAgent'))" />
+    </ItemGroup>
+
+	<PropertyGroup>
+	    <AgentDir Condition="'@(FilteredReferences)' != ''">@(FilteredReferences-&gt;'%(HintPath)')</AgentDir>
+        <AgentDir Condition="'@(FilteredReferencesNuGet)' != ''">@(FilteredReferencesNuGet-&gt;'%(FullPath)')</AgentDir>
+        <AgentDir Condition="'$(AgentDir.IndexOf(&quot;;&quot;))' != -1">$(AgentDir.Substring(0, $(AgentDir.IndexOf(";"))))</AgentDir>
+    </PropertyGroup>
+
+    <Error Condition="!Exists('$(AgentDir.Substring(0, $(AgentDir.LastIndexOf(&quot;$(PathSeparator)lib&quot;))))$(PathSeparator)tools$(PathSeparator)$(Instrumentor)')" Text="Agent component directory not found!" />
+    <Exec Command="&#xD;&#xA;     &quot;$(AgentDir.Substring(0, $(AgentDir.LastIndexOf(&quot;$(PathSeparator)lib&quot;))))$(PathSeparator)tools$(PathSeparator)$(Instrumentor)&quot; apk=&quot;%(ApkFiles.FullPath)&quot; prop=&quot;$(ProjectDir)Assets$(PathSeparator)Dynatrace.properties&quot;&#xD;&#xA;" />
+    <Copy SourceFiles="@(ApkFiles)" DestinationFolder="$(IntermediateOutputPath)android$(PathSeparator)bin$(PathSeparator)orginal$(PathSeparator)" />
+    <Copy SourceFiles="$(IntermediateOutputPath)android$(PathSeparator)bin$(PathSeparator)%(ApkFiles.Filename)$(PathSeparator)dist$(PathSeparator)%(ApkFiles.Filename).apk" DestinationFolder="$(IntermediateOutputPath)android$(PathSeparator)bin$(PathSeparator)" />
+    <RemoveDir Directories="$(IntermediateOutputPath)android$(PathSeparator)bin$(PathSeparator)%(ApkFiles.Filename)" />
+</Target>
+
+Step 3 : For IOS
+         Copy the PLIST code snippet into the existing Info.plist file in your Visual Studio project.
+         And in AppDelegate.cs
+         DynatraceIOS.Dynatrace.start();
